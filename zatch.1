@@ -1,0 +1,26 @@
+.Dd Aug 17, 2017
+.Dt ZATCH 1
+.Os
+.Sh NAME
+.Nm zatch
+.Nd efficiently watch directory changes on macOS
+.Sh SYNOPSIS
+.Nm
+.Ar dir
+.Ar ...
+.Sh DESCRIPTION
+.Nm
+efficiently watches directory changes on macOS.
+.Pp 
+.Bl -tag -width Ds
+.It Ar dir
+One or more directories to watch.
+.El
+.Sh EXIT STATUS
+.Ex -std 
+.Sh AUTHORS
+.An -nosplit
+.An Tim Kuijsten Aq Mt tim@netsend.nl
+.Sh CAVEATS
+Sometimes changes in a deeper directory are coalesced with changes in a parent
+dir. This is a limitation of the FSEvents API.
