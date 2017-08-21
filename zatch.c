@@ -33,8 +33,11 @@ main(int argc, char *argv[])
   struct path_map **pm;
   struct stat st;
 
-  while ((c = getopt(argc, argv, "hl:")) != -1) {
+  while ((c = getopt(argc, argv, "hdl:")) != -1) {
     switch (c) {
+    case 'd':
+      debug = 1;
+      break;
     case 'l':
       if ((latency = strtod(optarg, &p)) == 0)
         err(1, "strtol");
