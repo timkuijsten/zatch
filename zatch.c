@@ -21,23 +21,40 @@ main(int argc, char *argv[])
   int i;
   CFStringRef *tmp_paths, *pp;
   CFArrayRef paths;
-  CFAbsoluteTime latency;
-  char resolved[PATH_MAX + 1];
+  CFAbsoluteTime latency = 0.02; /* default latency in seconds */
+  char resolved[PATH_MAX + 1], c, *p;
   struct stat st;
 
-  if (argc < 2) {
+  while ((c = getopt(argc, argv, "hl:")) != -1) {
+    switch (c) {
+    case 'l':
+      if ((latency = strtod(optarg, &p)) == 0)
+        err(1, "strtol");
+      break;
+    case 'h':
+      fprintf(stdout, "usage: %s <dir> ...\n", __progname);
+      exit(0);
+    case '?':
+      exit(1);
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+
+  if (argc < 1) {
     fprintf(stderr, "usage: %s <dir> ...\n", __progname);
     exit(1);
   }
 
-  if ((tmp_paths = calloc(argc - 1, sizeof(CFStringRef))) == NULL)
+  if ((tmp_paths = calloc(argc, sizeof(CFStringRef))) == NULL)
     err(1, "malloc");
 
   /* make sure each parameter really is an existing directory */
   pp = tmp_paths;
   if (debug)
     fprintf(stderr, "watching");
-  for (i = 1; i < argc; i++)
+  for (i = 0; i < argc; i++)
     if (stat(argv[i], &st) == -1) {
       err(1, "%s", argv[i]);
     } else {
@@ -56,9 +73,7 @@ main(int argc, char *argv[])
   if (debug)
     fprintf(stderr, "\n");
 
-  paths = CFArrayCreate(NULL, (const void **)tmp_paths, argc - 1, NULL);
-
-  latency = 0.01; /* latency in seconds */
+  paths = CFArrayCreate(NULL, (const void **)tmp_paths, argc, NULL);
 
   stream = FSEventStreamCreate(NULL,
     &cb,
