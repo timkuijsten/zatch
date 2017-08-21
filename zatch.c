@@ -10,10 +10,17 @@ extern char *__progname;
 
 FSEventStreamRef stream;
 
+struct path_map {
+  int resolvedlen; /* length of resolved path, excluding the terminating null byte */
+  char *resolved;
+  char *orig;
+};
+
 void cb(ConstFSEventStreamRef, void *, size_t numEvents, void *, const FSEventStreamEventFlags *, const FSEventStreamEventId *);
 void graceful_shutdown(int);
 
 static int debug = 0;
+static struct path_map **path_maps;
 
 int
 main(int argc, char *argv[])
@@ -23,6 +30,7 @@ main(int argc, char *argv[])
   CFArrayRef paths;
   CFAbsoluteTime latency = 0.02; /* default latency in seconds */
   char resolved[PATH_MAX + 1], c, *p;
+  struct path_map **pm;
   struct stat st;
 
   while ((c = getopt(argc, argv, "hl:")) != -1) {
@@ -48,7 +56,12 @@ main(int argc, char *argv[])
   }
 
   if ((tmp_paths = calloc(argc, sizeof(CFStringRef))) == NULL)
-    err(1, "malloc");
+    err(1, "calloc CFStringRef");
+
+  /* first allocate enough space for a pointer to a structure for each dir plus a NULL pointer */
+  if ((path_maps = (struct path_map **)calloc(argc + 1, sizeof(struct path_map **))) == NULL)
+    err(1, "calloc path_map **");
+  pm = path_maps;
 
   /* make sure each parameter really is an existing directory */
   pp = tmp_paths;
@@ -63,12 +76,23 @@ main(int argc, char *argv[])
 
       if (realpath(argv[i], resolved) == NULL)
         err(1, "realpath");
+      if ((*pm = malloc(sizeof(struct path_map))) == NULL)
+        err(1, "malloc path_map");
+      (*pm)->resolvedlen = strlen(resolved);
+      if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1, sizeof(char))) == NULL)
+        err(1, "calloc strlen");
+      strcpy((*pm)->resolved, resolved);
+      (*pm)->orig = argv[i];
+      pm++;
 
       if ((*pp++ = CFStringCreateWithCString(NULL, resolved, kCFStringEncodingUTF8)) == NULL)
         errx(1, "CFStringCreateWithCString");
       if (debug)
         fprintf(stderr, " %s", resolved);
     }
+
+  /* signal path map end */
+  *pm = NULL;
 
   if (debug)
     fprintf(stderr, "\n");
@@ -109,11 +133,21 @@ void cb(
 {
   int i;
   char **paths = event_paths;
+  struct path_map **pm;
 
   for (i = 0; i < num_events; i++) {
-    printf("%s\n", paths[i]);
-    if (fflush(stdout) == EOF)
-      err(1, "fflush");
+    /* translate to user supplied path */
+    for (pm = path_maps; *pm; pm++) {
+      if (debug)
+        fprintf(stderr, "%s %s %s\n", paths[i], (*pm)->orig, (*pm)->resolved);
+      if (strncmp((*pm)->resolved, paths[i], (*pm)->resolvedlen) != 0)
+        continue;
+
+      printf("%s\n", (*pm)->orig);
+      if (fflush(stdout) == EOF)
+        err(1, "fflush");
+      break;
+    }
   }
 }
 
