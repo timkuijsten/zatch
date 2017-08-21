@@ -3,8 +3,8 @@
 Efficiently watch directory changes on macOS.
 
 Features:
-* Uses the FSEvents API of macOS
 * Simply echos the name of a dir with changes on stdout
+* Uses the FSEvents API of macOS
 
 Status: **alpha**
 
@@ -30,15 +30,20 @@ $ sudo make install
 
 ### Examples
 
-rsync all files in a changed dir and it's subdirs to example.com:
+rsync all files in foo to example.com after some of it's descendants change:
 ```sh
-zatch . | awk '{ system("rsync -az " $1 " example.com:") }'
+zatch foo | awk '{ system("rsync -az foo example.com:") }'
 ```
 
 
 ## Documentation
 
 For documentation please refer to the manual.
+
+
+## Wishlist
+
+* support -s option to echo subdirs
 
 
 ## License
