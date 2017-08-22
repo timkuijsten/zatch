@@ -139,9 +139,8 @@ void cb(
   struct path_map **pm;
 
   for (i = 0; i < num_events; i++) {
-    if (debug && event_flags[i] != kFSEventStreamEventFlagNone) {
+    if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
       fprintf(stderr, "flags present: %x\n", event_flags[i]);
-    }
 
     /* translate to user supplied path */
     for (pm = path_maps; *pm; pm++) {
