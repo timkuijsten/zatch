@@ -26,7 +26,7 @@ int
 main(int argc, char *argv[])
 {
   int i;
-  CFStringRef *tmp_paths, *pp;
+  CFStringRef *tmp_path, *pp;
   CFArrayRef paths;
   CFAbsoluteTime latency = 0.02; /* default latency in seconds */
   char resolved[PATH_MAX + 1], c, *p;
@@ -58,7 +58,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  if ((tmp_paths = calloc(argc, sizeof(CFStringRef))) == NULL)
+  if ((tmp_path = calloc(argc, sizeof(CFStringRef))) == NULL)
     err(1, "calloc CFStringRef");
 
   /* first allocate enough space for a pointer to a structure for each dir plus a NULL pointer */
@@ -67,7 +67,7 @@ main(int argc, char *argv[])
   pm = path_maps;
 
   /* make sure each parameter really is an existing directory */
-  pp = tmp_paths;
+  pp = tmp_path;
   if (debug)
     fprintf(stderr, "watching");
   for (i = 0; i < argc; i++)
@@ -100,7 +100,7 @@ main(int argc, char *argv[])
   if (debug)
     fprintf(stderr, "\n");
 
-  paths = CFArrayCreate(NULL, (const void **)tmp_paths, argc, NULL);
+  paths = CFArrayCreate(NULL, (const void **)tmp_path, argc, NULL);
 
   stream = FSEventStreamCreate(NULL,
     &cb,
