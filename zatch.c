@@ -148,7 +148,7 @@ void cb(
       if (strncmp((*pm)->resolved, paths[i], (*pm)->resolvedlen) != 0)
         continue;
 
-      printf("%s\n", (*pm)->orig);
+      fprintf(stdout, "%s\n", (*pm)->orig);
       if (fflush(stdout) == EOF)
         err(1, "fflush");
       break;
