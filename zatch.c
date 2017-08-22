@@ -104,11 +104,11 @@ main(int argc, char *argv[])
 
   stream = FSEventStreamCreate(NULL,
     &cb,
-    NULL,                           /* callbackInfo */
+    NULL,                           /* callback info */
     paths,
     kFSEventStreamEventIdSinceNow,  /* only changes from now on */
     latency,
-    kFSEventStreamCreateFlagNoDefer /* Flags explained in reference */
+    kFSEventStreamCreateFlagNone
   );
 
   if (signal(SIGINT, graceful_shutdown) == SIG_ERR)
