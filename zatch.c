@@ -28,7 +28,7 @@ main(int argc, char *argv[])
   int i;
   CFStringRef *tmp_path, *pp;
   CFArrayRef paths;
-  CFAbsoluteTime latency = 0.02; /* default latency in seconds */
+  CFAbsoluteTime latency = 0.03; /* default latency in seconds */
   char resolved[PATH_MAX + 1], c, *p;
   struct path_map **pm;
   struct stat st;
