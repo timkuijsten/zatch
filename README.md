@@ -6,7 +6,7 @@ Features:
 * Simply echos the name of a dir with changes on stdout
 * Uses the FSEvents API of macOS
 
-Status: **alpha**
+Status: **beta**
 
 zatch is primarily developed and tested on macOS 10.12.
 
@@ -28,11 +28,12 @@ $ sudo make install
 * C compiler
 
 
-### Examples
+### Example
 
-rsync all files in foo to example.com after some of it's descendants change:
+rsync all files in the directories *foo* and *bar* recursively to example.com
+anytime something in it or in any of it's subdirectories changes:
 ```sh
-zatch foo | awk '{ system("rsync -az foo example.com:") }'
+zatch foo bar | awk '{ system("rsync -az " $1 " example.com:") }'
 ```
 
 
