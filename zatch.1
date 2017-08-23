@@ -1,4 +1,4 @@
-.Dd Aug 17, 2017
+.Dd Aug 23, 2017
 .Dt ZATCH 1
 .Os
 .Sh NAME
@@ -6,21 +6,25 @@
 .Nd efficiently watch directory changes on macOS
 .Sh SYNOPSIS
 .Nm
-.Ar dir
-.Ar ...
+.Op Fl hp
+.Ar dir ...
 .Sh DESCRIPTION
 .Nm
-efficiently watches directory changes on macOS.
-.Pp 
+efficiently watches directory changes on macOS. It does this by coalescing all changes in a directory that happen within 30 ms and echo a line on stdout to indicate that one or more things changed in that directory or any of it's subdirectories.
+.Pp
+The options are as follows:
 .Bl -tag -width Ds
+.It Fl h
+Show usage and exit.
+.It Fl p
+Preflight - echo the name of each dir on the command line once before starting
+to monitor.
 .It Ar dir
 One or more directories to watch.
 .El
+.Pp
 .Sh EXIT STATUS
 .Ex -std 
 .Sh AUTHORS
 .An -nosplit
 .An Tim Kuijsten Aq Mt tim@netsend.nl
-.Sh CAVEATS
-Sometimes changes in a deeper directory are coalesced with changes in a parent
-dir. This is a limitation of the FSEvents API.
