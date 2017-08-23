@@ -4,7 +4,7 @@ Efficiently watch directory changes on macOS.
 
 Features:
 * Simply echos the name of a dir with changes on stdout
-* Uses the FSEvents API of macOS
+* Fast without taking a lot of resources (uses the FSEvents API of macOS)
 
 Status: **beta**
 
