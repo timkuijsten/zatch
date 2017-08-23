@@ -25,7 +25,7 @@ static struct path_map **path_maps;
 int
 main(int argc, char *argv[])
 {
-  int i;
+  int i, preflight;
   CFStringRef *tmp_path, *pp;
   CFArrayRef paths;
   CFAbsoluteTime latency = 0.03; /* default latency in seconds */
@@ -33,7 +33,9 @@ main(int argc, char *argv[])
   struct path_map **pm;
   struct stat st;
 
-  while ((c = getopt(argc, argv, "hdl:")) != -1) {
+  preflight = 0;
+
+  while ((c = getopt(argc, argv, "hdpl:")) != -1) {
     switch (c) {
     case 'd':
       debug = 1;
@@ -41,6 +43,9 @@ main(int argc, char *argv[])
     case 'l':
       if ((latency = strtod(optarg, &p)) == 0)
         err(1, "strtol");
+      break;
+    case 'p':
+      preflight = 1;
       break;
     case 'h':
       fprintf(stdout, "usage: %s <dir> ...\n", __progname);
@@ -117,6 +122,13 @@ main(int argc, char *argv[])
     err(1, "signal");
 
   FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+
+  if (preflight)
+    for (pm = path_maps; *pm; pm++) {
+      fprintf(stdout, "%s\n", (*pm)->orig);
+      if (fflush(stdout) == EOF)
+        err(1, "fflush");
+    }
 
   /* start! */
   FSEventStreamStart(stream);
