@@ -13,6 +13,7 @@ FSEventStreamRef stream;
 struct path_map {
   int resolvedlen; /* length of resolved path, excluding the terminating null byte */
   char *resolved;
+  int origlen;
   char *orig;
 };
 
@@ -24,10 +25,13 @@ static struct path_map **path_maps;
 
 int print_usage(FILE *fp);
 
+/* options */
+static int preflight, subdir;
+
 int
 main(int argc, char *argv[])
 {
-  int i, preflight;
+  int i;
   CFStringRef *tmp_path, *pp;
   CFArrayRef paths;
   CFAbsoluteTime latency = 0.03; /* default latency in seconds */
@@ -36,8 +40,9 @@ main(int argc, char *argv[])
   struct stat st;
 
   preflight = 0;
+  subdir    = 0;
 
-  while ((c = getopt(argc, argv, "hdpl:")) != -1) {
+  while ((c = getopt(argc, argv, "hpsdl:")) != -1) {
     switch (c) {
     case 'd':
       debug = 1;
@@ -48,6 +53,9 @@ main(int argc, char *argv[])
       break;
     case 'p':
       preflight = 1;
+      break;
+    case 's':
+      subdir = 1;
       break;
     case 'h':
       print_usage(stdout);
@@ -92,6 +100,7 @@ main(int argc, char *argv[])
       if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1, sizeof(char))) == NULL)
         err(1, "calloc strlen");
       strcpy((*pm)->resolved, resolved);
+      (*pm)->origlen = strlen(argv[i]);
       (*pm)->orig = argv[i];
       pm++;
 
@@ -127,7 +136,10 @@ main(int argc, char *argv[])
 
   if (preflight)
     for (pm = path_maps; *pm; pm++) {
-      fprintf(stdout, "%s\n", (*pm)->orig);
+      if (subdir && (*pm)->orig[(*pm)->origlen - 1] != '/') /* ensure trailing slash */
+        fprintf(stdout, "%s/\n", (*pm)->orig);
+      else
+        fprintf(stdout, "%s\n", (*pm)->orig);
       if (fflush(stdout) == EOF)
         err(1, "fflush");
     }
@@ -148,7 +160,7 @@ void cb(
     const FSEventStreamEventFlags event_flags[],
     const FSEventStreamEventId event_ids[])
 {
-  int i;
+  int i, soff; /* string offset */
   char **paths = event_paths;
   struct path_map **pm;
 
@@ -156,12 +168,25 @@ void cb(
     if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
       fprintf(stderr, "flags present: %x\n", event_flags[i]);
 
-    /* translate to user supplied path */
+    /* translate to user supplied path, optionally with subdir */
     for (pm = path_maps; *pm; pm++) {
       if (strncmp((*pm)->resolved, paths[i], (*pm)->resolvedlen) != 0)
         continue;
 
-      fprintf(stdout, "%s\n", (*pm)->orig);
+      fprintf(stdout, "%s", (*pm)->orig);
+      if (subdir) {
+        /* resolved is excluding a trailing slash unless the root of the file-
+         * system is watched, paths is including a trailing slash, orig is user
+         * defined */
+        soff = (*pm)->resolvedlen; /* expect paths[i][soff] == "/" unless orig is the root */
+        /* step over the slash if the user supplied a dir with a trailing slash
+         * unless it's the file-system root */
+        if ((*pm)->origlen > 1 && (*pm)->orig[(*pm)->origlen - 1] == '/')
+          soff++;
+        fprintf(stdout, "%s", &paths[i][soff]);
+      }
+      fprintf(stdout, "\n");
+
       if (fflush(stdout) == EOF)
         err(1, "fflush");
       break;
@@ -183,5 +208,5 @@ graceful_shutdown(int sig)
 int
 print_usage(FILE *fp)
 {
-  return fprintf(fp, "usage: %s [-hp] dir ...\n", __progname);
+  return fprintf(fp, "usage: %s [-hps] dir ...\n", __progname);
 }

@@ -42,11 +42,6 @@ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
 For documentation please refer to the manual.
 
 
-## Wishlist
-
-* support -s option to echo subdirs
-
-
 ## License
 
 ISC
