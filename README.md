@@ -11,6 +11,15 @@ Status: **beta**
 zatch is primarily developed and tested on macOS 10.12.
 
 
+## Example
+
+rsync all files in the directories *foo* and *bar* recursively to example.com
+anytime something in it or in any of it's subdirectories changes:
+```sh
+$ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
+```
+
+
 ## Installation
 
 Compile and install zatch:
@@ -26,15 +35,6 @@ $ sudo make install
 ### Build requirements
 
 * C compiler
-
-
-### Example
-
-rsync all files in the directories *foo* and *bar* recursively to example.com
-anytime something in it or in any of it's subdirectories changes:
-```sh
-$ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
-```
 
 
 ## Documentation
