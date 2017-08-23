@@ -22,6 +22,8 @@ void graceful_shutdown(int);
 static int debug = 0;
 static struct path_map **path_maps;
 
+int print_usage(FILE *fp);
+
 int
 main(int argc, char *argv[])
 {
@@ -48,7 +50,7 @@ main(int argc, char *argv[])
       preflight = 1;
       break;
     case 'h':
-      fprintf(stdout, "usage: %s <dir> ...\n", __progname);
+      print_usage(stdout);
       exit(0);
     case '?':
       exit(1);
@@ -59,7 +61,7 @@ main(int argc, char *argv[])
   argv += optind;
 
   if (argc < 1) {
-    fprintf(stderr, "usage: %s <dir> ...\n", __progname);
+    print_usage(stderr);
     exit(1);
   }
 
@@ -175,4 +177,11 @@ graceful_shutdown(int sig)
   FSEventStreamRelease(stream);
 
   exit(0);
+}
+
+/* return number of characters printed or <0 on error */
+int
+print_usage(FILE *fp)
+{
+  return fprintf(fp, "usage: %s [-hp] dir ...\n", __progname);
 }
