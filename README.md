@@ -33,7 +33,7 @@ $ sudo make install
 rsync all files in the directories *foo* and *bar* recursively to example.com
 anytime something in it or in any of it's subdirectories changes:
 ```sh
-zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
+$ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
 ```
 
 
