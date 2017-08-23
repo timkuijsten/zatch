@@ -3,7 +3,8 @@
 Efficiently watch directory changes on macOS.
 
 Features:
-* Easy to script, simply echos the name of a dir with changes on stdout
+* Easy to integrate in shell scripts, zatch simply echoes the name of a dir with
+  changes on stdout
 * Fast without taking a lot of resources (uses the FSEvents API of macOS)
 * No runtime dependencies
 
