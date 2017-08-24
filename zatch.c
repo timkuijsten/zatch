@@ -181,7 +181,7 @@ void cb(
         soff = (*pm)->resolvedlen; /* expect paths[i][soff] == "/" unless orig is the root */
         /* step over the slash if the user supplied a dir with a trailing slash
          * unless it's the file-system root */
-        if ((*pm)->origlen > 1 && (*pm)->orig[(*pm)->origlen - 1] == '/')
+        if ((*pm)->resolvedlen > 1 && (*pm)->orig[(*pm)->origlen - 1] == '/')
           soff++;
         fprintf(stdout, "%s", &paths[i][soff]);
       }
