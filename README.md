@@ -43,7 +43,7 @@ $ sudo make install
 
 ## Documentation
 
-For documentation please refer to the manual.
+For documentation please refer to the manual (`$ man zatch`).
 
 
 ## License
