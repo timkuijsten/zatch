@@ -163,25 +163,35 @@ void cb(
   int i, soff; /* string offset */
   char **paths = event_paths;
   struct path_map **pm;
+  struct path_map *culprit;
 
   for (i = 0; i < num_events; i++) {
     if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
       fprintf(stderr, "flags present: %x\n", event_flags[i]);
 
-    /* translate to user supplied path, optionally with subdir */
+    culprit = NULL;
     for (pm = path_maps; *pm; pm++) {
-      if (strncmp((*pm)->resolved, paths[i], (*pm)->resolvedlen) != 0)
-        continue;
+      /*  compare the path values using the resolved length to compensate for
+          trailing slashes, if there is no culprit yet or its resolvedlen is shorter
+          we update it  */
+      if (strncmp((*pm)->resolved, paths[i], (*pm)->resolvedlen) == 0 &&
+          (!culprit || (culprit->resolvedlen < (*pm)->resolvedlen))) {
+        culprit = *pm;
+      }
+    }
 
-      fprintf(stdout, "%s", (*pm)->orig);
+    /*  if a culprit was found, send it to stdout, optionally with subdir  */
+    if (culprit) {
+      fprintf(stdout, "%s", culprit->orig);
+
       if (subdir) {
         /* resolved is excluding a trailing slash unless the root of the file-
          * system is watched, paths is including a trailing slash, orig is user
          * defined */
-        soff = (*pm)->resolvedlen; /* expect paths[i][soff] == "/" unless orig is the root */
+        soff = culprit->resolvedlen; /* expect paths[i][soff] == "/" unless orig is the root */
         /* step over the slash if the user supplied a dir with a trailing slash
          * unless it's the file-system root */
-        if ((*pm)->resolvedlen > 1 && (*pm)->orig[(*pm)->origlen - 1] == '/')
+        if (culprit->resolvedlen > 1 && culprit->orig[culprit->origlen - 1] == '/')
           soff++;
         fprintf(stdout, "%s", &paths[i][soff]);
       }
@@ -189,6 +199,7 @@ void cb(
 
       if (fflush(stdout) == EOF)
         err(1, "fflush");
+
       break;
     }
   }
