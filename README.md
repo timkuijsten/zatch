@@ -15,12 +15,18 @@ Status: **beta**
 zatch is primarily developed and tested on macOS 10.12.
 
 
-## Example
+## Examples
 
 rsync all files in the directories *foo* and *bar* recursively to example.com
 anytime something in it or in any of it's subdirectories changes:
 ```sh
 $ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
+```
+
+Show a macOS notification with the name of the subdirectory that contains
+changes, but filter out any component named *xar*:
+```sh
+$ zatch -s foo bar | fgrep --line-buffered -v '/xar/' | while read _path; do osascript -e "display notification \"$_path\""; done
 ```
 
 
