@@ -23,6 +23,11 @@ anytime something in it or in any of it's subdirectories changes:
 $ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
 ```
 
+Run a node webserver and restart it on every file change:
+```sh
+$ zatch -p . | while read p; do pkill node; node server.js & done
+```
+
 Show a macOS notification with the name of the subdirectory that contains
 changes, but filter out any component named *xar*:
 ```sh
