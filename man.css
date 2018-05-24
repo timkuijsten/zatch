@@ -1,0 +1,43 @@
+body {
+  line-height: 1.3em;
+  font-family: Helvetica, Arial, sans-serif;
+  max-width: 35em;
+  padding: 64px 51px;
+}
+
+.foot {
+  margin-top: 2em;
+}
+
+h1 {
+  font-size: 18px;
+  margin-top: 1.4em;
+}
+
+a {
+  color: black;
+}
+
+div.Pp {
+  margin-top: 1em;
+}
+table.head, table.foot { width: 100%; }
+td.head-rtitle, td.foot-os { text-align: right; }
+td.head-vol { text-align: center; }
+table.foot td { width: 50%; }
+table.head td.head-vol { width: 60%; }
+table.head td.head-ltitle { width: 20%; }
+table.head td.head-rtitle { width: 20%; }
+
+@media print {
+  #container {
+    max-width: 100% !important;
+    font-size: 14px !important;
+    font-family: Georgia, "Times New Roman", serif !important;
+  }
+
+  body {
+    padding-top: 0px;
+    padding-bottom: 0px;
+  }
+}
