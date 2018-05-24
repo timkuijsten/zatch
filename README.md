@@ -10,9 +10,7 @@ Features:
 * Fast without taking a lot of resources (uses the FSEvents API of macOS)
 * Small and no runtime dependencies
 
-Status: **beta**
-
-zatch is primarily developed and tested on macOS 10.12.
+Status: **stable**
 
 
 ## Examples
@@ -35,6 +33,11 @@ $ zatch -s foo bar | fgrep --line-buffered -v '/xar/' | while read _path; do osa
 ```
 
 
+### Requirements
+
+* macOS
+
+
 ## Installation
 
 Compile and install zatch:
@@ -47,14 +50,9 @@ $ sudo make install
 ```
 
 
-### Build requirements
-
-* C compiler
-
-
 ## Documentation
 
-For documentation please refer to the manual (`$ man zatch`).
+For documentation please refer to the manual [zatch(1)].
 
 
 ## License
@@ -74,3 +72,5 @@ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+[zatch(1)]: https://netsend.nl/zatch/zatch.1.html
