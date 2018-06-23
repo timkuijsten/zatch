@@ -33,22 +33,17 @@ main(int argc, char *argv[])
 	int i;
 	CFStringRef *tmp_path, *pp;
 	CFArrayRef paths;
-	CFAbsoluteTime latency = 0.03; /* default latency in seconds */
-	char resolved[PATH_MAX + 1], c, *p;
+	char resolved[PATH_MAX + 1], c;
 	struct path_map **pm;
 	struct stat st;
 
 	preflight = 0;
 	subdir = 0;
 
-	while ((c = getopt(argc, argv, "hpsdl:")) != -1) {
+	while ((c = getopt(argc, argv, "hpsd")) != -1) {
 		switch (c) {
 		case 'd':
 			debug = 1;
-			break;
-		case 'l':
-			if ((latency = strtod(optarg, &p)) == 0)
-				err(1, "strtol");
 			break;
 		case 'p':
 			preflight = 1;
@@ -129,7 +124,7 @@ main(int argc, char *argv[])
 		NULL, /* callback info */
 		paths,
 		kFSEventStreamEventIdSinceNow, /* only changes from now on */
-		latency,
+		0.03, /* latency in seconds */
 		kFSEventStreamCreateFlagNone
 	);
 
