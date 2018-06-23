@@ -6,8 +6,6 @@
 
 #include <CoreServices/CoreServices.h>
 
-extern char *__progname;
-
 FSEventStreamRef stream;
 
 struct path_map {
@@ -243,9 +241,8 @@ graceful_shutdown(int sig)
 	exit(0);
 }
 
-/* return number of characters printed or <0 on error */
 int
 print_usage(FILE *fp)
 {
-	return fprintf(fp, "usage: %s [-hps] dir ...\n", __progname);
+	return fprintf(fp, "usage: %s [-hps] dir ...\n", getprogname());
 }
