@@ -34,7 +34,7 @@ main(int argc, char *argv[])
 	struct path_map **pm;
 	struct stat st;
 	char resolved[PATH_MAX + 1], c;
-	int i;
+	int i, j;
 
 	while ((c = getopt(argc, argv, "dhps")) != -1) {
 		switch (c) {
@@ -63,6 +63,23 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
+	/* remove all arguments that are not the name of a directory */
+	for (i = 0; i < argc; i++) {
+		if (stat(argv[i], &st) == -1 || !S_ISDIR(st.st_mode)) {
+			warnx("%s: Not a directory", argv[i]);
+
+			/* compact */
+			for (j = i; j < argc; j++)
+				argv[j] = argv[j + 1];
+			i--;
+			argc--;
+			continue;
+		}
+	}
+
+	if (argc < 1)
+		errx(1, "no directories to watch");
+
 	if ((tmp_path = calloc(argc, sizeof(CFStringRef))) == NULL)
 		err(1, "calloc tmp_path");
 
@@ -76,17 +93,10 @@ main(int argc, char *argv[])
 
 	pm = path_maps;
 
-	/* make sure each parameter really is an existing directory */
 	pp = tmp_path;
 	if (debug)
 		fprintf(stderr, "watching");
 	for (i = 0; i < argc; i++) {
-		if (stat(argv[i], &st) == -1)
-			err(1, "%s", argv[i]);
-
-		if (!S_ISDIR(st.st_mode))
-			errx(1, "%s is not a directory", argv[i]);
-
 		if (realpath(argv[i], resolved) == NULL)
 			err(1, "realpath");
 
