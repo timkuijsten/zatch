@@ -11,14 +11,15 @@ extern char *__progname;
 FSEventStreamRef stream;
 
 struct path_map {
-  int resolvedlen; /* length of resolved path, excluding the terminating null byte */
-  char *resolved;
-  int origlen;
-  char *orig;
+	int resolvedlen;
+	char *resolved;
+	int origlen;
+	char *orig;
 };
 
-void cb(ConstFSEventStreamRef, void *, size_t numEvents, void *, const FSEventStreamEventFlags *, const FSEventStreamEventId *);
 void graceful_shutdown(int);
+void cb(ConstFSEventStreamRef, void *, size_t numEvents, void *,
+	const FSEventStreamEventFlags *, const FSEventStreamEventId *);
 
 static int debug = 0;
 static struct path_map **path_maps;
@@ -31,193 +32,220 @@ static int preflight, subdir;
 int
 main(int argc, char *argv[])
 {
-  int i;
-  CFStringRef *tmp_path, *pp;
-  CFArrayRef paths;
-  CFAbsoluteTime latency = 0.03; /* default latency in seconds */
-  char resolved[PATH_MAX + 1], c, *p;
-  struct path_map **pm;
-  struct stat st;
+	int i;
+	CFStringRef *tmp_path, *pp;
+	CFArrayRef paths;
+	CFAbsoluteTime latency = 0.03; /* default latency in seconds */
+	char resolved[PATH_MAX + 1], c, *p;
+	struct path_map **pm;
+	struct stat st;
 
-  preflight = 0;
-  subdir    = 0;
+	preflight = 0;
+	subdir = 0;
 
-  while ((c = getopt(argc, argv, "hpsdl:")) != -1) {
-    switch (c) {
-    case 'd':
-      debug = 1;
-      break;
-    case 'l':
-      if ((latency = strtod(optarg, &p)) == 0)
-        err(1, "strtol");
-      break;
-    case 'p':
-      preflight = 1;
-      break;
-    case 's':
-      subdir = 1;
-      break;
-    case 'h':
-      print_usage(stdout);
-      exit(0);
-    case '?':
-      exit(1);
-    }
-  }
+	while ((c = getopt(argc, argv, "hpsdl:")) != -1) {
+		switch (c) {
+		case 'd':
+			debug = 1;
+			break;
+		case 'l':
+			if ((latency = strtod(optarg, &p)) == 0)
+				err(1, "strtol");
+			break;
+		case 'p':
+			preflight = 1;
+			break;
+		case 's':
+			subdir = 1;
+			break;
+		case 'h':
+			print_usage(stdout);
+			exit(0);
+		case '?':
+			exit(1);
+		}
+	}
 
-  argc -= optind;
-  argv += optind;
+	argc -= optind;
+	argv += optind;
 
-  if (argc < 1) {
-    print_usage(stderr);
-    exit(1);
-  }
+	if (argc < 1) {
+		print_usage(stderr);
+		exit(1);
+	}
 
-  if ((tmp_path = calloc(argc, sizeof(CFStringRef))) == NULL)
-    err(1, "calloc CFStringRef");
+	if ((tmp_path = calloc(argc, sizeof(CFStringRef))) == NULL)
+		err(1, "calloc CFStringRef");
 
-  /* first allocate enough space for a pointer to a structure for each dir plus a NULL pointer */
-  if ((path_maps = (struct path_map **)calloc(argc + 1, sizeof(struct path_map **))) == NULL)
-    err(1, "calloc path_map **");
-  pm = path_maps;
+	/*
+	 * Allocate enough space for a pointer to a structure for each dir plus
+	 * a NULL pointer.
+	 */
 
-  /* make sure each parameter really is an existing directory */
-  pp = tmp_path;
-  if (debug)
-    fprintf(stderr, "watching");
-  for (i = 0; i < argc; i++)
-    if (stat(argv[i], &st) == -1) {
-      err(1, "%s", argv[i]);
-    } else {
-      if (!S_ISDIR(st.st_mode))
-        errx(1, "%s is not a directory", argv[i]);
+	if ((path_maps = (struct path_map **)calloc(argc + 1,
+	    sizeof(struct path_map **))) == NULL)
+		err(1, "calloc path_map **");
+	pm = path_maps;
 
-      if (realpath(argv[i], resolved) == NULL)
-        err(1, "realpath");
-      if ((*pm = malloc(sizeof(struct path_map))) == NULL)
-        err(1, "malloc path_map");
-      (*pm)->resolvedlen = strlen(resolved);
-      if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1, sizeof(char))) == NULL)
-        err(1, "calloc strlen");
-      strcpy((*pm)->resolved, resolved);
-      (*pm)->origlen = strlen(argv[i]);
-      (*pm)->orig = argv[i];
-      pm++;
+	/* make sure each parameter really is an existing directory */
+	pp = tmp_path;
+	if (debug)
+		fprintf(stderr, "watching");
+	for (i = 0; i < argc; i++)
+		if (stat(argv[i], &st) == -1) {
+			err(1, "%s", argv[i]);
+		} else {
+			if (!S_ISDIR(st.st_mode))
+				errx(1, "%s is not a directory", argv[i]);
 
-      if ((*pp++ = CFStringCreateWithCString(NULL, resolved, kCFStringEncodingUTF8)) == NULL)
-        errx(1, "CFStringCreateWithCString");
-      if (debug)
-        fprintf(stderr, " %s", resolved);
-    }
+			if (realpath(argv[i], resolved) == NULL)
+				err(1, "realpath");
+			if ((*pm = malloc(sizeof(struct path_map))) == NULL)
+				err(1, "malloc path_map");
+			(*pm)->resolvedlen = strlen(resolved);
+			if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1,
+			    sizeof(char))) == NULL)
+				err(1, "calloc strlen");
+			strcpy((*pm)->resolved, resolved);
+			(*pm)->origlen = strlen(argv[i]);
+			(*pm)->orig = argv[i];
+			pm++;
 
-  /* signal path map end */
-  *pm = NULL;
+			if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
+			    kCFStringEncodingUTF8)) == NULL)
+				errx(1, "CFStringCreateWithCString");
+			if (debug)
+				fprintf(stderr, " %s", resolved);
+		}
 
-  if (debug)
-    fprintf(stderr, "\n");
+	/* signal path map end */
+	*pm = NULL;
 
-  paths = CFArrayCreate(NULL, (const void **)tmp_path, argc, NULL);
+	if (debug)
+		fprintf(stderr, "\n");
 
-  stream = FSEventStreamCreate(NULL,
-    &cb,
-    NULL,                           /* callback info */
-    paths,
-    kFSEventStreamEventIdSinceNow,  /* only changes from now on */
-    latency,
-    kFSEventStreamCreateFlagNone
-  );
+	paths = CFArrayCreate(NULL, (const void **)tmp_path, argc, NULL);
 
-  if (signal(SIGINT, graceful_shutdown) == SIG_ERR)
-    err(1, "signal");
-  if (signal(SIGTERM, graceful_shutdown) == SIG_ERR)
-    err(1, "signal");
+	stream = FSEventStreamCreate(NULL,
+		&cb,
+		NULL, /* callback info */
+		paths,
+		kFSEventStreamEventIdSinceNow, /* only changes from now on */
+		latency,
+		kFSEventStreamCreateFlagNone
+	);
 
-  FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+	if (signal(SIGINT, graceful_shutdown) == SIG_ERR)
+		err(1, "signal");
+	if (signal(SIGTERM, graceful_shutdown) == SIG_ERR)
+		err(1, "signal");
 
-  if (preflight)
-    for (pm = path_maps; *pm; pm++) {
-      if (subdir && (*pm)->orig[(*pm)->origlen - 1] != '/') /* ensure trailing slash */
-        fprintf(stdout, "%s/\n", (*pm)->orig);
-      else
-        fprintf(stdout, "%s\n", (*pm)->orig);
-      if (fflush(stdout) == EOF)
-        err(1, "fflush");
-    }
+	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(),
+		kCFRunLoopDefaultMode);
 
-  /* start! */
-  FSEventStreamStart(stream);
-  CFRunLoopRun();
+	if (preflight)
+		for (pm = path_maps; *pm; pm++) {
+			/* ensure trailing slash */
+			if (subdir && (*pm)->orig[(*pm)->origlen - 1] != '/')
+				fprintf(stdout, "%s/\n", (*pm)->orig);
+			else
+				fprintf(stdout, "%s\n", (*pm)->orig);
+			if (fflush(stdout) == EOF)
+				err(1, "fflush");
+		}
 
-  /* should not reach */
-  exit(2);
+	/* start! */
+	FSEventStreamStart(stream);
+	CFRunLoopRun();
+
+	/* should not reach */
+	exit(2);
 }
 
 void cb(
-    ConstFSEventStreamRef stream_ref,
-    void *client_cbinfo,
-    size_t num_events,
-    void *event_paths,
-    const FSEventStreamEventFlags event_flags[],
-    const FSEventStreamEventId event_ids[])
+		ConstFSEventStreamRef stream_ref,
+		void *client_cbinfo,
+		size_t num_events,
+		void *event_paths,
+		const FSEventStreamEventFlags event_flags[],
+		const FSEventStreamEventId event_ids[])
 {
-  int i, soff; /* string offset */
-  char **paths = event_paths;
-  struct path_map **pm;
-  struct path_map *culprit;
+	int i, soff; /* string offset */
+	char **paths = event_paths;
+	struct path_map **pm;
+	struct path_map *culprit;
 
-  for (i = 0; i < num_events; i++) {
-    if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
-      fprintf(stderr, "flags present: %x\n", event_flags[i]);
+	for (i = 0; i < num_events; i++) {
+		if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
+			fprintf(stderr, "flags present: %x\n", event_flags[i]);
 
-    culprit = NULL;
-    for (pm = path_maps; *pm; pm++) {
-      /*  compare the path values using the resolved length to compensate for
-          trailing slashes, if there is no culprit yet or its resolvedlen is shorter
-          we update it  */
-      if (strncmp((*pm)->resolved, paths[i], (*pm)->resolvedlen) == 0 &&
-          (!culprit || (culprit->resolvedlen < (*pm)->resolvedlen))) {
-        culprit = *pm;
-      }
-    }
+		culprit = NULL;
+		for (pm = path_maps; *pm; pm++) {
+			/*
+			 * Compare the path values using the resolved length to
+			 * compensate for trailing slashes, if there is no
+			 * culprit yet or its resolvedlen is shorter we update
+			 * it.
+			 */
+			if (strncmp((*pm)->resolved, paths[i],
+			    (*pm)->resolvedlen) == 0 && (!culprit ||
+			    (culprit->resolvedlen < (*pm)->resolvedlen))) {
+				culprit = *pm;
+			}
+		}
 
-    /*  if a culprit was found, send it to stdout, optionally with subdir  */
-    if (culprit) {
-      fprintf(stdout, "%s", culprit->orig);
+		/*
+		 * If a culprit was found, send it to stdout, optionally with
+		 * subdir.
+		 */
+		if (culprit) {
+			fprintf(stdout, "%s", culprit->orig);
 
-      if (subdir) {
-        /* resolved is excluding a trailing slash unless the root of the file-
-         * system is watched, paths is including a trailing slash, orig is user
-         * defined */
-        soff = culprit->resolvedlen; /* expect paths[i][soff] == "/" unless orig is the root */
-        /* step over the slash if the user supplied a dir with a trailing slash
-         * unless it's the file-system root */
-        if (culprit->resolvedlen > 1 && culprit->orig[culprit->origlen - 1] == '/')
-          soff++;
-        fprintf(stdout, "%s", &paths[i][soff]);
-      }
-      fprintf(stdout, "\n");
+			if (subdir) {
+				/*
+				 * Resolved is excluding a trailing slash unless
+				 * the root of the file-system is watched, paths
+				 * is including a trailing slash, orig is user
+				 * defined.
+				 *
+				 * expect paths[i][soff] == "/" unless orig is
+				 * the root
+				 */
+				soff = culprit->resolvedlen;
 
-      if (fflush(stdout) == EOF)
-        err(1, "fflush");
+				/*
+				 * Step over the slash if the user supplied a
+				 * dir with a trailing slash unless it's the
+				 * file-system root.
+				 */
+				if (culprit->resolvedlen > 1 &&
+				    culprit->orig[culprit->origlen - 1] == '/')
+					soff++;
+				fprintf(stdout, "%s", &paths[i][soff]);
+			}
+			fprintf(stdout, "\n");
 
-      break;
-    }
-  }
+			if (fflush(stdout) == EOF)
+				err(1, "fflush");
+
+			break;
+		}
+	}
 }
 
 void
 graceful_shutdown(int sig)
 {
-  FSEventStreamStop(stream);
-  FSEventStreamInvalidate(stream);
-  FSEventStreamRelease(stream);
+	FSEventStreamStop(stream);
+	FSEventStreamInvalidate(stream);
+	FSEventStreamRelease(stream);
 
-  exit(0);
+	exit(0);
 }
 
 /* return number of characters printed or <0 on error */
 int
 print_usage(FILE *fp)
 {
-  return fprintf(fp, "usage: %s [-hps] dir ...\n", __progname);
+	return fprintf(fp, "usage: %s [-hps] dir ...\n", __progname);
 }
