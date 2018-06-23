@@ -65,16 +65,16 @@ main(int argc, char *argv[])
 	}
 
 	if ((tmp_path = calloc(argc, sizeof(CFStringRef))) == NULL)
-		err(1, "calloc CFStringRef");
+		err(1, "calloc tmp_path");
 
 	/*
-	 * Allocate enough space for a pointer to a structure for each dir plus
-	 * a NULL pointer.
+	 * Create a NULL terminated list of pointers to path map structures.
 	 */
 
-	if ((path_maps = (struct path_map **)calloc(argc + 1,
-	    sizeof(struct path_map **))) == NULL)
-		err(1, "calloc path_map **");
+	if ((path_maps = calloc(argc + 1, sizeof(struct path_map **))) == NULL)
+		err(1, "calloc path_maps");
+	path_maps[argc] = NULL;
+
 	pm = path_maps;
 
 	/* make sure each parameter really is an existing directory */
