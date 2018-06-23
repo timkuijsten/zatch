@@ -103,14 +103,12 @@ main(int argc, char *argv[])
 		if ((*pm = malloc(sizeof(struct path_map))) == NULL)
 			err(1, "malloc path_map");
 
-		(*pm)->resolvedlen = strlen(resolved);
-		if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1,
-		    sizeof(char))) == NULL)
-			err(1, "calloc strlen");
-
-		strcpy((*pm)->resolved, resolved);
-		(*pm)->origlen = strlen(argv[i]);
 		(*pm)->orig = argv[i];
+		(*pm)->origlen = strlen(argv[i]);
+		(*pm)->resolved = strdup(resolved);
+		(*pm)->resolvedlen = strlen(resolved);
+		if (((*pm)->resolved) == NULL)
+			err(1, "strdup resolved");
 		pm++;
 
 		if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
