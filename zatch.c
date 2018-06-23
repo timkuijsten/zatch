@@ -9,51 +9,48 @@
 FSEventStreamRef stream;
 
 struct path_map {
-	int resolvedlen;
-	char *resolved;
-	int origlen;
-	char *orig;
+	char	*resolved;
+	int	 resolvedlen;
+	char	*orig;
+	int	 origlen;
 };
 
 void graceful_shutdown(int);
 void cb(ConstFSEventStreamRef, void *, size_t numEvents, void *,
-	const FSEventStreamEventFlags *, const FSEventStreamEventId *);
+    const FSEventStreamEventFlags *, const FSEventStreamEventId *);
 
-static int debug = 0;
 static struct path_map **path_maps;
-
-int print_usage(FILE *fp);
+static int debug;
 
 /* options */
 static int preflight, subdir;
 
+static int print_usage(FILE *fp);
+
 int
 main(int argc, char *argv[])
 {
-	int i;
-	CFStringRef *tmp_path, *pp;
 	CFArrayRef paths;
-	char resolved[PATH_MAX + 1], c;
+	CFStringRef *tmp_path, *pp;
 	struct path_map **pm;
 	struct stat st;
+	char resolved[PATH_MAX + 1], c;
+	int i;
 
-	preflight = 0;
-	subdir = 0;
-
-	while ((c = getopt(argc, argv, "hpsd")) != -1) {
+	while ((c = getopt(argc, argv, "dhps")) != -1) {
 		switch (c) {
 		case 'd':
 			debug = 1;
 			break;
+		case 'h':
+			print_usage(stdout);
+			exit(0);
 		case 'p':
 			preflight = 1;
 			break;
 		case 's':
 			subdir = 1;
 			break;
-		case 'h':
-			print_usage(stdout);
-			exit(0);
 		case '?':
 			exit(1);
 		}
@@ -155,18 +152,19 @@ main(int argc, char *argv[])
 	exit(2);
 }
 
-void cb(
-		ConstFSEventStreamRef stream_ref,
-		void *client_cbinfo,
-		size_t num_events,
-		void *event_paths,
-		const FSEventStreamEventFlags event_flags[],
-		const FSEventStreamEventId event_ids[])
+void cb(ConstFSEventStreamRef stream_ref,
+    void *client_cbinfo,
+    size_t  num_events,
+    void *event_paths,
+    const FSEventStreamEventFlags event_flags[],
+    const FSEventStreamEventId event_ids[])
 {
-	int i, soff; /* string offset */
-	char **paths = event_paths;
-	struct path_map **pm;
-	struct path_map *culprit;
+	struct	path_map **pm;
+	struct	path_map *culprit;
+	char	**paths;
+	int	i, soff; /* string offset */
+
+	paths = event_paths;
 
 	for (i = 0; i < num_events; i++) {
 		if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
