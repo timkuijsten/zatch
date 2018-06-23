@@ -81,32 +81,35 @@ main(int argc, char *argv[])
 	pp = tmp_path;
 	if (debug)
 		fprintf(stderr, "watching");
-	for (i = 0; i < argc; i++)
-		if (stat(argv[i], &st) == -1) {
+	for (i = 0; i < argc; i++) {
+		if (stat(argv[i], &st) == -1)
 			err(1, "%s", argv[i]);
-		} else {
-			if (!S_ISDIR(st.st_mode))
-				errx(1, "%s is not a directory", argv[i]);
 
-			if (realpath(argv[i], resolved) == NULL)
-				err(1, "realpath");
-			if ((*pm = malloc(sizeof(struct path_map))) == NULL)
-				err(1, "malloc path_map");
-			(*pm)->resolvedlen = strlen(resolved);
-			if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1,
-			    sizeof(char))) == NULL)
-				err(1, "calloc strlen");
-			strcpy((*pm)->resolved, resolved);
-			(*pm)->origlen = strlen(argv[i]);
-			(*pm)->orig = argv[i];
-			pm++;
+		if (!S_ISDIR(st.st_mode))
+			errx(1, "%s is not a directory", argv[i]);
 
-			if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
-			    kCFStringEncodingUTF8)) == NULL)
-				errx(1, "CFStringCreateWithCString");
-			if (debug)
-				fprintf(stderr, " %s", resolved);
-		}
+		if (realpath(argv[i], resolved) == NULL)
+			err(1, "realpath");
+
+		if ((*pm = malloc(sizeof(struct path_map))) == NULL)
+			err(1, "malloc path_map");
+
+		(*pm)->resolvedlen = strlen(resolved);
+		if (((*pm)->resolved = calloc((*pm)->resolvedlen + 1,
+		    sizeof(char))) == NULL)
+			err(1, "calloc strlen");
+
+		strcpy((*pm)->resolved, resolved);
+		(*pm)->origlen = strlen(argv[i]);
+		(*pm)->orig = argv[i];
+		pm++;
+
+		if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
+		    kCFStringEncodingUTF8)) == NULL)
+			errx(1, "CFStringCreateWithCString");
+		if (debug)
+			fprintf(stderr, " %s", resolved);
+	}
 
 	/* signal path map end */
 	*pm = NULL;
