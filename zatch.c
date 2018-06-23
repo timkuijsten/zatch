@@ -30,7 +30,6 @@ static int print_usage(FILE *fp);
 int
 main(int argc, char *argv[])
 {
-	CFArrayRef paths;
 	CFStringRef *tmp_path, *pp;
 	struct path_map **pm;
 	struct stat st;
@@ -117,12 +116,10 @@ main(int argc, char *argv[])
 	if (debug)
 		fprintf(stderr, "\n");
 
-	paths = CFArrayCreate(NULL, (const void **)tmp_path, argc, NULL);
-
 	stream = FSEventStreamCreate(NULL,
 		&cb,
 		NULL, /* callback info */
-		paths,
+		CFArrayCreate(NULL, (const void **)tmp_path, argc, NULL),
 		kFSEventStreamEventIdSinceNow, /* only changes from now on */
 		0.03, /* latency in seconds */
 		kFSEventStreamCreateFlagNone
