@@ -59,7 +59,7 @@ For documentation please refer to the manual [zatch(1)].
 
 ISC
 
-Copyright (c) 2017 Tim Kuijsten
+Copyright (c) 2017, 2018 Tim Kuijsten
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
