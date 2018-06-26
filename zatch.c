@@ -6,6 +6,8 @@
 
 #include <CoreServices/CoreServices.h>
 
+#define VERSION "1.0.1-beta"
+
 FSEventStreamRef stream;
 
 struct path_map {
@@ -36,7 +38,7 @@ main(int argc, char *argv[])
 	char resolved[PATH_MAX + 1], c;
 	int i, j;
 
-	while ((c = getopt(argc, argv, "dhps")) != -1) {
+	while ((c = getopt(argc, argv, "dhpsV")) != -1) {
 		switch (c) {
 		case 'd':
 			debug = 1;
@@ -50,6 +52,9 @@ main(int argc, char *argv[])
 		case 's':
 			subdir = 1;
 			break;
+		case 'V':
+			printf("version " VERSION "\n");
+			exit(0);
 		case '?':
 			exit(1);
 		}
@@ -245,5 +250,5 @@ graceful_shutdown(int sig)
 int
 print_usage(FILE *fp)
 {
-	return fprintf(fp, "usage: %s [-hps] dir ...\n", getprogname());
+	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
 }
