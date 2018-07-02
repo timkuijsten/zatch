@@ -6,7 +6,7 @@
 
 #include <CoreServices/CoreServices.h>
 
-#define VERSION "1.0.1-beta"
+#define VERSION "1.0.1-rc"
 
 FSEventStreamRef stream;
 
