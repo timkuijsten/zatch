@@ -173,7 +173,6 @@ void cb(ConstFSEventStreamRef stream_ref,
     const FSEventStreamEventId event_ids[])
 {
 	struct	path_map **pm;
-	struct	path_map *culprit;
 	char	**paths;
 	int	i, soff; /* string offset */
 
@@ -183,51 +182,44 @@ void cb(ConstFSEventStreamRef stream_ref,
 		if (event_flags[i] != kFSEventStreamEventFlagNone)
 			warnx("flags present: %x %s", event_flags[i], paths[i]);
 
-		culprit = NULL;
+		/* Translate to user supplied path, optionally with subdir. */
 		for (pm = path_maps; *pm; pm++) {
-			/*
-			 * Compare the path values using the resolved length to
-			 * compensate for trailing slashes, if there is no
-			 * culprit yet or its resolvedlen is shorter we update
-			 * it.
-			 */
 			if (strncmp((*pm)->resolved, paths[i],
-			    (*pm)->resolvedlen) == 0 && (!culprit ||
-			    (culprit->resolvedlen < (*pm)->resolvedlen))) {
-				culprit = *pm;
-			}
-		}
+			    (*pm)->resolvedlen) != 0)
+				continue;
 
-		/*
-		 * If a culprit was found, send it to stdout, optionally with
-		 * subdir.
-		 */
-		if (culprit) {
-			printf("%s", culprit->orig);
+			/*
+			 * Expect paths to always include a trailing slash, so
+			 * no need for an extra check on \0 in case it's not a
+			 * '/'.
+			 */
+			if (paths[i][(*pm)->resolvedlen] != '/')
+				continue;
 
+			/* We have a match. */
+			printf("%s", (*pm)->orig);
+
+			/* Append subdir if requested. */
 			if (subdir) {
 				/*
 				 * Resolved is excluding a trailing slash unless
 				 * the root of the file-system is watched, paths
 				 * is including a trailing slash, orig is user
 				 * defined.
-				 *
-				 * expect paths[i][soff] == "/" unless orig is
-				 * the root
 				 */
-				soff = culprit->resolvedlen;
+				soff = (*pm)->resolvedlen;
 
 				/*
 				 * Step over the slash if the user supplied a
 				 * dir with a trailing slash unless it's the
 				 * file-system root.
 				 */
-				if (culprit->resolvedlen > 1 &&
-				    culprit->orig[culprit->origlen - 1] == '/')
+				if ((*pm)->resolvedlen > 1 &&
+				    (*pm)->orig[(*pm)->origlen - 1] == '/')
 					soff++;
-				fprintf(stdout, "%s", &paths[i][soff]);
+				printf("%s", &paths[i][soff]);
 			}
-			fprintf(stdout, "\n");
+			printf("\n");
 
 			if (fflush(stdout) == EOF)
 				err(1, "fflush");
