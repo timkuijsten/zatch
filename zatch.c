@@ -180,8 +180,8 @@ void cb(ConstFSEventStreamRef stream_ref,
 	paths = event_paths;
 
 	for (i = 0; i < num_events; i++) {
-		if (debug && event_flags[i] != kFSEventStreamEventFlagNone)
-			fprintf(stderr, "flags present: %x\n", event_flags[i]);
+		if (event_flags[i] != kFSEventStreamEventFlagNone)
+			warnx("flags present: %x %s", event_flags[i], paths[i]);
 
 		culprit = NULL;
 		for (pm = path_maps; *pm; pm++) {
