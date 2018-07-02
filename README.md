@@ -6,9 +6,9 @@ while you're writing code.
 
 Features:
 * Easy to integrate in shell scripts, zatch simply echoes the name of a dir with
-  changes to stdout
-* Fast without taking a lot of resources (uses the FSEvents API of macOS)
-* Small and no runtime dependencies
+  changes on stdout
+* Fast without using a lot of resources (uses the FSEvents API of macOS)
+* Small and no dependencies other than macOS
 
 Status: **stable**
 
