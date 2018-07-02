@@ -110,10 +110,24 @@ main(int argc, char *argv[])
 
 		(*pm)->orig = argv[i];
 		(*pm)->origlen = strlen(argv[i]);
-		(*pm)->resolved = strdup(resolved);
 		(*pm)->resolvedlen = strlen(resolved);
-		if (((*pm)->resolved) == NULL)
-			err(1, "strdup resolved");
+
+		/*
+		 * Ensure a trailing slash in the resolved path. Since the
+		 * FSEvents API will return each path with a trailing slash this
+		 * allows for easier matching in the callback.
+		 */
+
+		if (resolved[(*pm)->resolvedlen - 1] != '/') {
+			(*pm)->resolvedlen++;
+			if (asprintf(&(*pm)->resolved, "%s/", resolved) !=
+			    (*pm)->resolvedlen)
+				errx(1, "asprintf");
+		} else {
+			/* Only happens with the root. */
+			if (((*pm)->resolved = strdup(resolved)) == NULL)
+				err(1, "strdup");
+		}
 		pm++;
 
 		if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
@@ -184,16 +198,13 @@ void cb(ConstFSEventStreamRef stream_ref,
 
 		/* Translate to user supplied path, optionally with subdir. */
 		for (pm = path_maps; *pm; pm++) {
+			/*
+			 * Resolved and paths are guaranteed to have a trailing
+			 * slash.
+			 */
+
 			if (strncmp((*pm)->resolved, paths[i],
 			    (*pm)->resolvedlen) != 0)
-				continue;
-
-			/*
-			 * Expect paths to always include a trailing slash, so
-			 * no need for an extra check on \0 in case it's not a
-			 * '/'.
-			 */
-			if (paths[i][(*pm)->resolvedlen] != '/')
 				continue;
 
 			/* We have a match. */
@@ -201,22 +212,14 @@ void cb(ConstFSEventStreamRef stream_ref,
 
 			/* Append subdir if requested. */
 			if (subdir) {
-				/*
-				 * Resolved is excluding a trailing slash unless
-				 * the root of the file-system is watched, paths
-				 * is including a trailing slash, orig is user
-				 * defined.
-				 */
 				soff = (*pm)->resolvedlen;
 
 				/*
-				 * Step over the slash if the user supplied a
-				 * dir with a trailing slash unless it's the
-				 * file-system root.
+				 * Only include the slash if the user did not
+				 * supply one.
 				 */
-				if ((*pm)->resolvedlen > 1 &&
-				    (*pm)->orig[(*pm)->origlen - 1] == '/')
-					soff++;
+				if ((*pm)->orig[(*pm)->origlen - 1] != '/')
+					soff--;
 				printf("%s", &paths[i][soff]);
 			}
 			printf("\n");
