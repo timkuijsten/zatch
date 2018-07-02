@@ -150,9 +150,9 @@ main(int argc, char *argv[])
 		for (pm = path_maps; *pm; pm++) {
 			/* ensure trailing slash */
 			if (subdir && (*pm)->orig[(*pm)->origlen - 1] != '/')
-				fprintf(stdout, "%s/\n", (*pm)->orig);
+				printf("%s/\n", (*pm)->orig);
 			else
-				fprintf(stdout, "%s\n", (*pm)->orig);
+				printf("%s\n", (*pm)->orig);
 			if (fflush(stdout) == EOF)
 				err(1, "fflush");
 		}
@@ -203,7 +203,7 @@ void cb(ConstFSEventStreamRef stream_ref,
 		 * subdir.
 		 */
 		if (culprit) {
-			fprintf(stdout, "%s", culprit->orig);
+			printf("%s", culprit->orig);
 
 			if (subdir) {
 				/*
