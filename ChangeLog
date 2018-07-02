@@ -1,5 +1,6 @@
-2018.06.23, Upcoming
+2018.07.02, Upcoming
 
+* Simplify and speed up matching loop
 * Just skip non-directory entries on startup, don't fail
 * Code cleanup, style and tweaks
 
