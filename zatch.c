@@ -17,7 +17,7 @@ struct path_map {
 	int	 origlen;
 };
 
-void graceful_shutdown(int);
+void shutdown(int);
 void cb(ConstFSEventStreamRef, void *, size_t numEvents, void *,
     const FSEventStreamEventFlags *, const FSEventStreamEventId *);
 
@@ -27,7 +27,7 @@ static int debug;
 /* options */
 static int preflight, subdir;
 
-static int print_usage(FILE *fp);
+static int prusage(FILE *fp);
 
 int
 main(int argc, char *argv[])
@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 			debug = 1;
 			break;
 		case 'h':
-			print_usage(stdout);
+			prusage(stdout);
 			exit(0);
 		case 'p':
 			preflight = 1;
@@ -64,7 +64,7 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	if (argc < 1) {
-		print_usage(stderr);
+		prusage(stderr);
 		exit(1);
 	}
 
@@ -152,9 +152,9 @@ main(int argc, char *argv[])
 		kFSEventStreamCreateFlagNone
 	);
 
-	if (signal(SIGINT, graceful_shutdown) == SIG_ERR)
+	if (signal(SIGINT, shutdown) == SIG_ERR)
 		err(1, "signal");
-	if (signal(SIGTERM, graceful_shutdown) == SIG_ERR)
+	if (signal(SIGTERM, shutdown) == SIG_ERR)
 		err(1, "signal");
 
 	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(),
@@ -233,7 +233,7 @@ void cb(ConstFSEventStreamRef stream_ref,
 }
 
 void
-graceful_shutdown(int sig)
+shutdown(int sig)
 {
 	FSEventStreamStop(stream);
 	FSEventStreamInvalidate(stream);
@@ -243,7 +243,7 @@ graceful_shutdown(int sig)
 }
 
 int
-print_usage(FILE *fp)
+prusage(FILE *fp)
 {
 	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
 }
