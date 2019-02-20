@@ -17,17 +17,80 @@ struct path_map {
 	int	 origlen;
 };
 
-void shutdown(int);
-void cb(ConstFSEventStreamRef, void *, size_t numEvents, void *,
-    const FSEventStreamEventFlags *, const FSEventStreamEventId *);
-
 static struct path_map **path_maps;
 static int debug;
 
 /* options */
 static int preflight, subdir;
 
-static int prusage(FILE *fp);
+void cb(ConstFSEventStreamRef stream_ref,
+    void *client_cbinfo,
+    size_t  num_events,
+    void *event_paths,
+    const FSEventStreamEventFlags event_flags[],
+    const FSEventStreamEventId event_ids[])
+{
+	struct	path_map **pm;
+	char	**paths;
+	int	i, soff; /* string offset */
+
+	paths = event_paths;
+
+	for (i = 0; i < num_events; i++) {
+		if (event_flags[i] != kFSEventStreamEventFlagNone)
+			warnx("flags present: %x %s", event_flags[i], paths[i]);
+
+		/* Translate to user supplied path, optionally with subdir. */
+		for (pm = path_maps; *pm; pm++) {
+			/*
+			 * Resolved and paths are guaranteed to have a trailing
+			 * slash.
+			 */
+
+			if (strncmp((*pm)->resolved, paths[i],
+			    (*pm)->resolvedlen) != 0)
+				continue;
+
+			/* We have a match. */
+			printf("%s", (*pm)->orig);
+
+			/* Append subdir if requested. */
+			if (subdir) {
+				soff = (*pm)->resolvedlen;
+
+				/*
+				 * Only include the slash if the user did not
+				 * supply one.
+				 */
+				if ((*pm)->orig[(*pm)->origlen - 1] != '/')
+					soff--;
+				printf("%s", &paths[i][soff]);
+			}
+			printf("\n");
+
+			if (fflush(stdout) == EOF)
+				err(1, "fflush");
+
+			break;
+		}
+	}
+}
+
+void
+shutdown(int sig)
+{
+	FSEventStreamStop(stream);
+	FSEventStreamInvalidate(stream);
+	FSEventStreamRelease(stream);
+
+	exit(0);
+}
+
+int
+prusage(FILE *fp)
+{
+	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
+}
 
 int
 main(int argc, char *argv[])
@@ -177,73 +240,4 @@ main(int argc, char *argv[])
 
 	/* should not reach */
 	exit(2);
-}
-
-void cb(ConstFSEventStreamRef stream_ref,
-    void *client_cbinfo,
-    size_t  num_events,
-    void *event_paths,
-    const FSEventStreamEventFlags event_flags[],
-    const FSEventStreamEventId event_ids[])
-{
-	struct	path_map **pm;
-	char	**paths;
-	int	i, soff; /* string offset */
-
-	paths = event_paths;
-
-	for (i = 0; i < num_events; i++) {
-		if (event_flags[i] != kFSEventStreamEventFlagNone)
-			warnx("flags present: %x %s", event_flags[i], paths[i]);
-
-		/* Translate to user supplied path, optionally with subdir. */
-		for (pm = path_maps; *pm; pm++) {
-			/*
-			 * Resolved and paths are guaranteed to have a trailing
-			 * slash.
-			 */
-
-			if (strncmp((*pm)->resolved, paths[i],
-			    (*pm)->resolvedlen) != 0)
-				continue;
-
-			/* We have a match. */
-			printf("%s", (*pm)->orig);
-
-			/* Append subdir if requested. */
-			if (subdir) {
-				soff = (*pm)->resolvedlen;
-
-				/*
-				 * Only include the slash if the user did not
-				 * supply one.
-				 */
-				if ((*pm)->orig[(*pm)->origlen - 1] != '/')
-					soff--;
-				printf("%s", &paths[i][soff]);
-			}
-			printf("\n");
-
-			if (fflush(stdout) == EOF)
-				err(1, "fflush");
-
-			break;
-		}
-	}
-}
-
-void
-shutdown(int sig)
-{
-	FSEventStreamStop(stream);
-	FSEventStreamInvalidate(stream);
-	FSEventStreamRelease(stream);
-
-	exit(0);
-}
-
-int
-prusage(FILE *fp)
-{
-	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
 }
