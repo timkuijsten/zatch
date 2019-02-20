@@ -1,4 +1,11 @@
-2018.07.02, Upcoming
+2019.02.20, Version 1.1.0-rc
+
+* Always ensure a terminating slash on echoed directories, not only with -s
+* Skip the loop on special events like a directory that has a new root
+* Completely refactored code to make it simpler and more idiomatic
+
+
+2018.07.02
 
 * Simplify and speed up matching loop
 * Just skip non-directory entries on startup, don't fail
