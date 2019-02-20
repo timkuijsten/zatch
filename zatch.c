@@ -1,6 +1,8 @@
 #include <sys/stat.h>
+
 #include <err.h>
 #include <signal.h>
+#define _DARWIN_BETTER_REALPATH
 #include <stdio.h>
 #include <stdlib.h>
 
