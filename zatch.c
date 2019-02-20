@@ -10,17 +10,17 @@
 
 #define VERSION "1.0.1-rc"
 
-struct path_map {
+struct pathmap {
 	char	*resolved;
 	int	 resolvedlen;
 	char	*orig;
 	int	 origlen;
 };
 
-static struct path_map **path_maps;
+static struct pathmap **pathmaps;
 
 /* options */
-static int preflight, subdir, debug;
+static int preflight, subdir, verbose;
 
 static FSEventStreamRef stream;
 
@@ -32,7 +32,7 @@ cb(ConstFSEventStreamRef stream_ref,
     const FSEventStreamEventFlags event_flags[],
     const FSEventStreamEventId event_ids[])
 {
-	struct	path_map **pm;
+	struct	pathmap **pm;
 	char	**paths;
 	int	i, soff; /* string offset */
 
@@ -43,7 +43,7 @@ cb(ConstFSEventStreamRef stream_ref,
 			warnx("flags present: %x %s", event_flags[i], paths[i]);
 
 		/* Translate to user supplied path, optionally with subdir. */
-		for (pm = path_maps; *pm; pm++) {
+		for (pm = pathmaps; *pm; pm++) {
 			/*
 			 * Resolved and paths are guaranteed to have a trailing
 			 * slash.
@@ -89,7 +89,7 @@ shutdown(int sig)
 }
 
 static int
-prusage(FILE *fp)
+printusage(FILE *fp)
 {
 	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
 }
@@ -98,7 +98,7 @@ int
 main(int argc, char *argv[])
 {
 	CFStringRef *tmp_path, *pp;
-	struct path_map **pm;
+	struct pathmap **pm;
 	struct stat st;
 	char resolved[PATH_MAX + 1], c;
 	int i, j;
@@ -106,10 +106,10 @@ main(int argc, char *argv[])
 	while ((c = getopt(argc, argv, "dhpsV")) != -1) {
 		switch (c) {
 		case 'd':
-			debug = 1;
+			verbose = 1;
 			break;
 		case 'h':
-			prusage(stdout);
+			printusage(stdout);
 			exit(0);
 		case 'p':
 			preflight = 1;
@@ -129,7 +129,7 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	if (argc < 1) {
-		prusage(stderr);
+		printusage(stderr);
 		exit(1);
 	}
 
@@ -157,21 +157,21 @@ main(int argc, char *argv[])
 	 * Create a NULL terminated list of pointers to path map structures.
 	 */
 
-	if ((path_maps = calloc(argc + 1, sizeof(struct path_map **))) == NULL)
-		err(1, "calloc path_maps");
-	path_maps[argc] = NULL;
+	if ((pathmaps = calloc(argc + 1, sizeof(struct pathmap **))) == NULL)
+		err(1, "calloc pathmaps");
+	pathmaps[argc] = NULL;
 
-	pm = path_maps;
+	pm = pathmaps;
 
 	pp = tmp_path;
-	if (debug)
+	if (verbose)
 		fprintf(stderr, "watching");
 	for (i = 0; i < argc; i++) {
 		if (realpath(argv[i], resolved) == NULL)
 			err(1, "realpath");
 
-		if ((*pm = malloc(sizeof(struct path_map))) == NULL)
-			err(1, "malloc path_map");
+		if ((*pm = malloc(sizeof(struct pathmap))) == NULL)
+			err(1, "malloc pathmap");
 
 		(*pm)->orig = argv[i];
 		(*pm)->origlen = strlen(argv[i]);
@@ -198,14 +198,14 @@ main(int argc, char *argv[])
 		if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
 		    kCFStringEncodingUTF8)) == NULL)
 			errx(1, "CFStringCreateWithCString");
-		if (debug)
+		if (verbose)
 			fprintf(stderr, " %s", resolved);
 	}
 
 	/* signal path map end */
 	*pm = NULL;
 
-	if (debug)
+	if (verbose)
 		fprintf(stderr, "\n");
 
 	stream = FSEventStreamCreate(NULL,
@@ -226,7 +226,7 @@ main(int argc, char *argv[])
 		kCFRunLoopDefaultMode);
 
 	if (preflight)
-		for (pm = path_maps; *pm; pm++) {
+		for (pm = pathmaps; *pm; pm++) {
 			/* ensure trailing slash */
 			if (subdir && (*pm)->orig[(*pm)->origlen - 1] != '/')
 				printf("%s/\n", (*pm)->orig);
