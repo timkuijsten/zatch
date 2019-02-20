@@ -25,22 +25,19 @@ static int preflight, subdir, verbose;
 static FSEventStreamRef stream;
 
 static void
-cb(ConstFSEventStreamRef stream_ref,
-    void *client_cbinfo,
-    size_t  num_events,
-    void *event_paths,
-    const FSEventStreamEventFlags event_flags[],
-    const FSEventStreamEventId event_ids[])
+cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
+    void *evpaths, const FSEventStreamEventFlags evflags[],
+    const FSEventStreamEventId evids[])
 {
 	struct	pathmap **pm;
 	char	**paths;
 	int	i, soff; /* string offset */
 
-	paths = event_paths;
+	paths = evpaths;
 
-	for (i = 0; i < num_events; i++) {
-		if (event_flags[i] != kFSEventStreamEventFlagNone)
-			warnx("flags present: %x %s", event_flags[i], paths[i]);
+	for (i = 0; i < nevents; i++) {
+		if (evflags[i] != kFSEventStreamEventFlagNone)
+			warnx("flags present: %x %s", evflags[i], paths[i]);
 
 		/* Translate to user supplied path, optionally with subdir. */
 		for (pm = pathmaps; *pm; pm++) {
