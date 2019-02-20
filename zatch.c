@@ -8,8 +8,6 @@
 
 #define VERSION "1.0.1-rc"
 
-FSEventStreamRef stream;
-
 struct path_map {
 	char	*resolved;
 	int	 resolvedlen;
@@ -18,12 +16,14 @@ struct path_map {
 };
 
 static struct path_map **path_maps;
-static int debug;
 
 /* options */
-static int preflight, subdir;
+static int preflight, subdir, debug;
 
-void cb(ConstFSEventStreamRef stream_ref,
+static FSEventStreamRef stream;
+
+static void
+cb(ConstFSEventStreamRef stream_ref,
     void *client_cbinfo,
     size_t  num_events,
     void *event_paths,
@@ -76,7 +76,7 @@ void cb(ConstFSEventStreamRef stream_ref,
 	}
 }
 
-void
+static void
 shutdown(int sig)
 {
 	FSEventStreamStop(stream);
@@ -86,7 +86,7 @@ shutdown(int sig)
 	exit(0);
 }
 
-int
+static int
 prusage(FILE *fp)
 {
 	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
