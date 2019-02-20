@@ -41,3 +41,13 @@ table.head td.head-rtitle { width: 20%; }
     padding-bottom: 0px;
   }
 }
+
+/* from mandoc generator */
+div.Nd, div.Bf, div.Op { display: inline; }
+span.Pa, span.Ad { font-style: italic; }
+span.Ms { font-weight: bold; }
+dl.Bl-diag > dt { font-weight: bold; }
+code.Nm, code.Fl, code.Cm, code.Ic,
+code.In, code.Fd, code.Fn,
+code.Cd { font-weight: bold;
+font-family: inherit; }
