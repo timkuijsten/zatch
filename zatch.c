@@ -91,7 +91,7 @@ shutdown(int sig)
 static int
 printusage(FILE *fp)
 {
-	return fprintf(fp, "usage: %s [-hpsV] dir ...\n", getprogname());
+	return fprintf(fp, "usage: %s [-Vpqsv] dir ...\n", getprogname());
 }
 
 int
@@ -103,23 +103,26 @@ main(int argc, char *argv[])
 	char resolved[PATH_MAX + 1], c;
 	int i, j;
 
-	while ((c = getopt(argc, argv, "dhpsV")) != -1) {
+	while ((c = getopt(argc, argv, "Vhpqsv")) != -1) {
 		switch (c) {
-		case 'd':
-			verbose = 1;
-			break;
+		case 'V':
+			printf("version " VERSION "\n");
+			exit(0);
 		case 'h':
 			printusage(stdout);
 			exit(0);
 		case 'p':
 			preflight = 1;
 			break;
+		case 'q':
+			verbose--;
+			break;
 		case 's':
 			subdir = 1;
 			break;
-		case 'V':
-			printf("version " VERSION "\n");
-			exit(0);
+		case 'v':
+			verbose++;
+			break;
 		case '?':
 			exit(1);
 		}
@@ -164,7 +167,7 @@ main(int argc, char *argv[])
 	pm = pathmaps;
 
 	pp = tmp_path;
-	if (verbose)
+	if (verbose > 0)
 		fprintf(stderr, "watching");
 	for (i = 0; i < argc; i++) {
 		if (realpath(argv[i], resolved) == NULL)
@@ -198,14 +201,14 @@ main(int argc, char *argv[])
 		if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
 		    kCFStringEncodingUTF8)) == NULL)
 			errx(1, "CFStringCreateWithCString");
-		if (verbose)
+		if (verbose > 0)
 			fprintf(stderr, " %s", resolved);
 	}
 
 	/* signal path map end */
 	*pm = NULL;
 
-	if (verbose)
+	if (verbose > 0)
 		fprintf(stderr, "\n");
 
 	stream = FSEventStreamCreate(NULL,
