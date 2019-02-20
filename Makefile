@@ -1,37 +1,25 @@
-OS=$(shell uname)
-
-PROG=zatch
-
-ifndef USRDIR
-	USRDIR=/usr/local
-endif
-BINDIR=$(USRDIR)/bin
-MANDIR=$(USRDIR)/share/man
-
-OBJ=zatch.o
-CFLAGS=-Wall
-
+CFLAGS = -Wall -Wextra -pedantic -Wno-unused-parameter
 LDFLAGS=-framework CoreServices
 
-INSTALL_DIR=install -dm 755
-INSTALL_BIN=install -m 555
-INSTALL_MAN=install -m 444
+INSTALL_BIN 	= install -m 0555
+INSTALL_MAN	= install -m 0444
 
-${PROG}: ${OBJ}
-	$(CC) ${CFLAGS} -o $@ ${OBJ} ${LDFLAGS}
+PREFIX	= /usr/local
+BINDIR	= $(PREFIX)/bin
+MANDIR	= $(PREFIX)/share/man
 
-%.o: %.c
-	$(CC) ${CFLAGS} -c $<
+zatch: zatch.c
+	$(CC) ${CFLAGS} -o $@ zatch.c ${LDFLAGS}
 
-install:
-	${INSTALL_DIR} ${DESTDIR}${BINDIR}
-	${INSTALL_DIR} ${DESTDIR}${MANDIR}/man1
-	${INSTALL_BIN} ${PROG} ${DESTDIR}${BINDIR}
-	${INSTALL_MAN} ${PROG}.1 ${DESTDIR}${MANDIR}/man1
+install: zatch
+	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL_BIN) zatch $(DESTDIR)$(BINDIR)
+	$(INSTALL_MAN) zatch.1 $(DESTDIR)$(MANDIR)/man1
 
-depend:
-	$(CC) ${CFLAGS} -E -MM *.c > .depend
+manhtml:
+	mandoc -T html -Ostyle=man.css zatch.1 > zatch.1.html
 
 .PHONY: clean
 clean:
-	rm -f ${OBJ} zatch
+	rm -f zatch
