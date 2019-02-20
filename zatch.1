@@ -1,4 +1,18 @@
-.Dd Jun 26, 2018
+.\" Copyright (c) 2018, 2019 Tim Kuijsten
+.\"
+.\" Permission to use, copy, modify, and/or distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: February 20 2019 $
 .Dt ZATCH 1
 .Os
 .Sh NAME
@@ -6,28 +20,44 @@
 .Nd efficiently watch directory changes on macOS
 .Sh SYNOPSIS
 .Nm
-.Op Fl hps
+.Op Fl Vhpqsv
 .Ar dir ...
 .Sh DESCRIPTION
 .Nm
-efficiently watches directory changes on macOS. It does this by coalescing all changes in a directory that happen within 30 ms and echo a line on stdout to indicate that one or more things changed in that directory or any of it's subdirectories.
+efficiently watches directory changes on macOS.
+It does this by coalescing all changes in a directory that happen within 30 ms
+and echo a line on stdout to indicate that one or more things changed in that
+directory or any of it's subdirectories.
+A trailing slash on the echoed directory names is ensured.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl V
+Print version and exit.
 .It Fl h
 Print usage and exit.
 .It Fl p
-Preflight - echo the name of each dir on the command line once before starting to monitor.
+Preflight - echo the name of each dir on the command line once before starting
+to monitor.
+.It Fl q
+Be less verbose.
+Can be used multiple times.
 .It Fl s
-Show subdirs to narrow down where a change occurred. Note that this ensures a trailing "/" after the echoed dir. Furthermore, since all changes within 30 ms are coalesced, some changes might have occurred in a subdirectory of the one that is echoed.
-.It Fl V
-Print version and exit.
+Show subdirs to narrow down where a change occurred.
+Since all changes within 30 ms are coalesced, some changes might have occurred
+in a subdirectory of the one that is echoed.
+.It Fl v
+Be more verbose.
+Can be used multiple times.
 .It Ar dir
 One or more directories to watch.
+A trailing slash is appended if not already specified before echoing
+.Ar dir
+to
+.Dv stdout .
 .El
-.Pp
 .Sh EXIT STATUS
 .Ex -std 
 .Sh AUTHORS
 .An -nosplit
-.An Tim Kuijsten Aq Mt tim@netsend.nl
+.An Tim Kuijsten

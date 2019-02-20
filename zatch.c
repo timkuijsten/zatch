@@ -1,5 +1,22 @@
+/*
+ * Copyright (c) 2017, 2018, 2019 Tim Kuijsten
+ *
+ * Permission to use, copy, modify, and distribute this software for any purpose
+ * with or without fee is hereby granted, provided that the above copyright
+ * notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #include <sys/stat.h>
 
+#include <assert.h>
 #include <err.h>
 #include <signal.h>
 #define _DARWIN_BETTER_REALPATH
@@ -8,16 +25,16 @@
 
 #include <CoreServices/CoreServices.h>
 
-#define VERSION "1.0.1-rc"
+#define VERSION "1.1.0-rc"
 
 struct pathmap {
-	char	*resolved;
-	int	 resolvedlen;
-	char	*orig;
-	int	 origlen;
+	char	*resolved;	/* with terminating slash and terminating nul */
+	size_t	 resolvedlen;	/* excluding the terminating nul */
+	char	*orig;	/* with terminating slash and terminating nul */
 };
 
-static struct pathmap **pathmaps;
+static struct pathmap **pms;
+static size_t pmssize;
 
 /* options */
 static int preflight, subdir, verbose;
@@ -29,43 +46,42 @@ cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
     void *evpaths, const FSEventStreamEventFlags evflags[],
     const FSEventStreamEventId evids[])
 {
-	struct	pathmap **pm;
-	char	**paths;
-	int	i, soff; /* string offset */
+	struct pathmap *pm;
+	const char **paths;
+	size_t i, j;
 
 	paths = evpaths;
 
 	for (i = 0; i < nevents; i++) {
-		if (evflags[i] != kFSEventStreamEventFlagNone)
-			warnx("flags present: %x %s", evflags[i], paths[i]);
+		if (evflags[i] != kFSEventStreamEventFlagNone) {
+			if (verbose > -1)
+				warnx("flags present: %x %s", evflags[i],
+				    paths[i]);
+			continue;
+		}
 
-		/* Translate to user supplied path, optionally with subdir. */
-		for (pm = pathmaps; *pm; pm++) {
+		/*
+		 * Translate to user supplied path, optionally with subdir.
+		 */
+
+		for (j = 0; j < pmssize; j++) {
+			pm = pms[j];
+
 			/*
-			 * Resolved and paths are guaranteed to have a trailing
-			 * slash.
+			 * Both paths are guaranteed to have a trailing slash.
 			 */
-
-			if (strncmp((*pm)->resolved, paths[i],
-			    (*pm)->resolvedlen) != 0)
+			if (strncmp(pm->resolved, paths[i], pm->resolvedlen)
+			    != 0)
 				continue;
 
-			/* We have a match. */
-			printf("%s", (*pm)->orig);
+			/* MATCH */
+			fputs(pm->orig, stdout);
 
-			/* Append subdir if requested. */
 			if (subdir) {
-				soff = (*pm)->resolvedlen;
-
-				/*
-				 * Only include the slash if the user did not
-				 * supply one.
-				 */
-				if ((*pm)->orig[(*pm)->origlen - 1] != '/')
-					soff--;
-				printf("%s", &paths[i][soff]);
+				puts(&paths[i][pm->resolvedlen]);
+			} else {
+				puts("");
 			}
-			printf("\n");
 
 			if (fflush(stdout) == EOF)
 				err(1, "fflush");
@@ -78,6 +94,7 @@ cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
 static void
 shutdown(int sig)
 {
+	CFRunLoopStop(CFRunLoopGetCurrent());
 	FSEventStreamStop(stream);
 	FSEventStreamInvalidate(stream);
 	FSEventStreamRelease(stream);
@@ -94,11 +111,11 @@ printusage(FILE *fp)
 int
 main(int argc, char *argv[])
 {
-	CFStringRef *tmp_path, *pp;
-	struct pathmap **pm;
+	CFStringRef *cfa;
+	struct pathmap *pm;
 	struct stat st;
-	char resolved[PATH_MAX + 1], c;
-	int i, j;
+	char rp[PATH_MAX + 1], c, *cp;
+	size_t i, n, cfasize;
 
 	while ((c = getopt(argc, argv, "Vhpqsv")) != -1) {
 		switch (c) {
@@ -133,87 +150,119 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	/* remove all arguments that are not the name of a directory */
-	for (i = 0; i < argc; i++) {
-		if (stat(argv[i], &st) == -1 || !S_ISDIR(st.st_mode)) {
-			warnx("%s: Not a directory", argv[i]);
-
-			/* compact */
-			for (j = i; j < argc; j++)
-				argv[j] = argv[j + 1];
-			i--;
-			argc--;
-			continue;
-		}
-	}
-
-	if (argc < 1)
-		errx(1, "no directories to watch");
-
-	if ((tmp_path = calloc(argc, sizeof(CFStringRef))) == NULL)
-		err(1, "calloc tmp_path");
-
 	/*
-	 * Create a NULL terminated list of pointers to path map structures.
+	 * Create two arrays. One array is used on every occurrence of an event
+	 * and maps a path name as given to the callback by the FSEvents API to
+	 * the name used by the user as a parameter to this program. The other
+	 * array is a list of all path names as a parameter for
+	 * FSEventStreamCreate. Skip any given paths that are not a directory.
 	 */
 
-	if ((pathmaps = calloc(argc + 1, sizeof(struct pathmap **))) == NULL)
-		err(1, "calloc pathmaps");
-	pathmaps[argc] = NULL;
+	pmssize = cfasize = 0;
+	for (i = 0; i < (size_t)argc; i++) {
+		if (stat(argv[i], &st) == -1) {
+			if (verbose > -2)
+				warn("%s", argv[i]);
+			continue;
+		}
 
-	pm = pathmaps;
+		if (!S_ISDIR(st.st_mode)) {
+			if (verbose > -1)
+				warnx("%s: Not a directory", argv[i]);
+			continue;
+		}
 
-	pp = tmp_path;
-	if (verbose > 0)
-		fprintf(stderr, "watching");
-	for (i = 0; i < argc; i++) {
-		if (realpath(argv[i], resolved) == NULL)
+		if (realpath(argv[i], rp) == NULL)
 			err(1, "realpath");
 
-		if ((*pm = malloc(sizeof(struct pathmap))) == NULL)
-			err(1, "malloc pathmap");
-
-		(*pm)->orig = argv[i];
-		(*pm)->origlen = strlen(argv[i]);
-		(*pm)->resolvedlen = strlen(resolved);
+		if ((pm = malloc(sizeof(*pm))) == NULL)
+			err(1, "malloc pm");
 
 		/*
-		 * Ensure a trailing slash in the resolved path. Since the
-		 * FSEvents API will return each path with a trailing slash this
-		 * allows for easier matching in the callback.
+		 * Copy the original dir as specified by the user but ensure a
+		 * terminating slash and terminating nul.
 		 */
 
-		if (resolved[(*pm)->resolvedlen - 1] != '/') {
-			(*pm)->resolvedlen++;
-			if (asprintf(&(*pm)->resolved, "%s/", resolved) !=
-			    (*pm)->resolvedlen)
-				errx(1, "asprintf");
-		} else {
-			/* Only happens with the root. */
-			if (((*pm)->resolved = strdup(resolved)) == NULL)
-				err(1, "strdup");
-		}
-		pm++;
+		n = strlen(argv[i]) + 1;	/* include terminating nul */
+		assert(n >= 2);
+		if (argv[i][n - 2] != '/')
+			n++;	/* add terminating slash */
 
-		if ((*pp++ = CFStringCreateWithCString(NULL, resolved,
+		if ((cp = malloc(n)) == NULL)
+			err(1, "malloc");
+
+		memcpy(cp, argv[i], strlen(argv[i]));
+		cp[n - 2] = '/';
+		cp[n - 1] = '\0';
+		pm->orig = cp;
+
+		/*
+		 * Same thing for the resolved path. Since the FSEvents API will
+		 * return each path with a trailing slash this allows for easier
+		 * matching in the callback. realpath(3) only yields a trailing
+		 * slash on the root path "/" and always terminates the path
+		 * with a nul.
+		 */
+
+		n = strlen(rp) + 1;	/* include terminating nul */
+		assert(n >= 2);
+		if (rp[n - 2] != '/')
+			n++;	/* add terminating slash */
+
+		if ((cp = malloc(n)) == NULL)
+			err(1, "malloc");
+
+		memcpy(cp, rp, strlen(rp));
+		cp[n - 2] = '/';
+		cp[n - 1] = '\0';
+		pm->resolved = cp;
+		pm->resolvedlen = n - 1;
+
+		if (INT_MAX / sizeof(*pms) <= pmssize)
+			errx(1, "overflow");
+		if (INT_MAX / sizeof(*cfa) <= cfasize)
+			errx(1, "overflow");
+		if ((pms = realloc(pms, (pmssize + 1) * sizeof(*pms))) == NULL)
+			err(1, "realloc pms");
+		if ((cfa = realloc(cfa, (cfasize + 1) * sizeof(*cfa))) == NULL)
+			err(1, "realloc cfa");
+		pmssize++;
+		cfasize++;
+
+		pms[pmssize - 1] = pm;
+
+		if ((cfa[cfasize - 1] = CFStringCreateWithCString(NULL, rp,
 		    kCFStringEncodingUTF8)) == NULL)
 			errx(1, "CFStringCreateWithCString");
-		if (verbose > 0)
-			fprintf(stderr, " %s", resolved);
+
+		if (verbose > 0) {
+			if (pmssize == 1)
+				fprintf(stderr, "watching");
+
+			fprintf(stderr, " %s", rp);
+		}
 	}
 
-	/* signal path map end */
-	*pm = NULL;
+	if (pmssize == 0)
+		errx(1, "no directories to watch");
 
 	if (verbose > 0)
 		fprintf(stderr, "\n");
 
+	if (preflight) {
+		for (i = 0; i < pmssize; i++)
+			puts(pms[i]->orig);
+
+		if (fflush(stdout) == EOF)
+			err(1, "fflush");
+	}
+
 	stream = FSEventStreamCreate(NULL,
 		&cb,
-		NULL, /* callback info */
-		CFArrayCreate(NULL, (const void **)tmp_path, argc, NULL),
-		kFSEventStreamEventIdSinceNow, /* only changes from now on */
-		0.03, /* latency in seconds */
+		NULL,
+		CFArrayCreate(NULL, (const void **)cfa, cfasize, NULL),
+		kFSEventStreamEventIdSinceNow,	/* only changes from now on */
+		0.03,	/* latency in seconds */
 		kFSEventStreamCreateFlagNone
 	);
 
@@ -225,21 +274,11 @@ main(int argc, char *argv[])
 	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(),
 		kCFRunLoopDefaultMode);
 
-	if (preflight)
-		for (pm = pathmaps; *pm; pm++) {
-			/* ensure trailing slash */
-			if (subdir && (*pm)->orig[(*pm)->origlen - 1] != '/')
-				printf("%s/\n", (*pm)->orig);
-			else
-				printf("%s\n", (*pm)->orig);
-			if (fflush(stdout) == EOF)
-				err(1, "fflush");
-		}
+	if (!FSEventStreamStart(stream))
+		errx(1, "FSEventStreamStart");
 
-	/* start! */
-	FSEventStreamStart(stream);
 	CFRunLoopRun();
 
-	/* should not reach */
+	/* never reached */
 	exit(2);
 }
