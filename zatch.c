@@ -48,7 +48,8 @@ cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
 {
 	struct pathmap *pm;
 	const char **paths;
-	size_t i, j;
+	size_t i, j, off, left;
+	int rc;
 
 	paths = evpaths;
 
@@ -66,26 +67,52 @@ cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
 		 * to have a trailing slash.
 		 */
 
-		for (j = 0; j < pmssize; j++) {
+		off = 0;
+		left = pmssize;
+		while (left) {
+			/* ceil of middle index */
+			j = ((left + 1) / 2) - 1 + off;
 			pm = pms[j];
 
-			if (strncmp(pm->resolved, paths[i], pm->resolvedlen)
-			    != 0)
-				continue;
-
-			if (subdir) {
-				fputs(pm->orig, stdout);
-				puts(&paths[i][pm->resolvedlen]);
+			rc = strncmp(pm->resolved, paths[i], pm->resolvedlen);
+			if (rc == 0) {
+				if (subdir) {
+					fputs(pm->orig, stdout);
+					puts(&paths[i][pm->resolvedlen]);
+				} else {
+					puts(pm->orig);
+				}
+				break;
+			} else if (rc > 0) { /* resolved > paths[i] */
+				if (j > 0) {
+					left = j - off;
+				} else {
+					break;
+				}
 			} else {
-				puts(pm->orig);
+				if (j < pmssize) {
+					off = j + 1;
+					left = pmssize - off;
+				} else {
+					break;
+				}
 			}
-
-			break;
 		}
 	}
 
 	if (fflush(stdout) == EOF)
 		err(1, "fflush");
+}
+
+static int
+sortresolved(const void *a, const void *b)
+{
+	const struct pathmap **pm1, **pm2;
+
+	pm1 = (const struct pathmap **)a;
+	pm2 = (const struct pathmap **)b;
+
+	return strcmp((*pm1)->resolved, (*pm2)->resolved);
 }
 
 static void
@@ -245,6 +272,9 @@ main(int argc, char *argv[])
 
 	if (verbose > 0)
 		fprintf(stderr, "\n");
+	
+	/* Make sure we can do a binary search on the resolved path. */
+	qsort(pms, pmssize, sizeof(*pms), sortresolved);
 
 	if (preflight) {
 		for (i = 0; i < pmssize; i++)
