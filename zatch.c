@@ -80,12 +80,12 @@ cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
 				puts(pm->orig);
 			}
 
-			if (fflush(stdout) == EOF)
-				err(1, "fflush");
-
 			break;
 		}
 	}
+
+	if (fflush(stdout) == EOF)
+		err(1, "fflush");
 }
 
 static void
