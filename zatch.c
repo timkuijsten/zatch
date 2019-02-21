@@ -61,26 +61,23 @@ cb(ConstFSEventStreamRef stream_ref, void *cbinfo, size_t nevents,
 		}
 
 		/*
-		 * Translate to user supplied path, optionally with subdir.
+		 * Translate to user supplied path, optionally with subdir. Both
+		 * paths from FSEvents as well as our own paths are guaranteed
+		 * to have a trailing slash.
 		 */
 
 		for (j = 0; j < pmssize; j++) {
 			pm = pms[j];
 
-			/*
-			 * Both paths are guaranteed to have a trailing slash.
-			 */
 			if (strncmp(pm->resolved, paths[i], pm->resolvedlen)
 			    != 0)
 				continue;
 
-			/* MATCH */
-			fputs(pm->orig, stdout);
-
 			if (subdir) {
+				fputs(pm->orig, stdout);
 				puts(&paths[i][pm->resolvedlen]);
 			} else {
-				puts("");
+				puts(pm->orig);
 			}
 
 			if (fflush(stdout) == EOF)
