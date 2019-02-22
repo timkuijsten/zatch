@@ -1,35 +1,41 @@
 # zatch
 
 Do stuff based on changes in your local file system. I.e. sync some files to a
-remote as soon as something changes locally, or repeatedly restart a process
+server as soon as something changes locally, or repeatedly restart a process
 while you're writing code.
 
 Features:
 * Easy to integrate in shell scripts, zatch simply echoes the name of a dir with
-  changes on stdout
-* Fast without using a lot of resources (uses the FSEvents API of macOS)
-* Small and no dependencies other than macOS
+  changes to stdout
+* Fast and lightweight (uses the native FSEvents API of macOS)
+* Small and no third-party dependencies
 
 Status: **stable**
 
 
 ## Examples
 
-rsync all files in the directories *foo* and *bar* recursively to example.com
-anytime something in it or in any of it's subdirectories changes:
-```sh
-$ zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
-```
+Run rsync anytime a file in *foo* or *bar* or any of it's subdirectories
+changes:
 
-Run a node webserver and restart it on every file change:
 ```sh
-$ zatch -p . | while read p; do pkill node; node server.js & done
+zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
 ```
 
 Show a macOS notification with the name of the subdirectory that contains
 changes, but filter out any component named *xar*:
+
 ```sh
-$ zatch -s foo bar | fgrep --line-buffered -v '/xar/' | while read _path; do osascript -e "display notification \"$_path\""; done
+zatch -s foo bar | fgrep --line-buffered -v '/xar/' | while read _path
+	do osascript -e "display notification \"$_path\""
+done
+```
+
+Initially start Node.js, and restart whenever a file changes in the current
+working dir or any of it's subdirectories:
+
+```sh
+zatch -p . | while read p; do pkill node; node server.js & done
 ```
 
 
@@ -52,7 +58,7 @@ $ sudo make install
 
 ## Documentation
 
-For documentation please refer to the manual [zatch(1)].
+For documentation please refer to the manpage [zatch(1)].
 
 
 ## License
