@@ -12,7 +12,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: February 20 2019 $
+.Dd $Mdocdate: February 22 2019 $
 .Dt ZATCH 1
 .Os
 .Sh NAME
@@ -58,6 +58,30 @@ to
 .El
 .Sh EXIT STATUS
 .Ex -std 
+.Sh EXAMPLES
+Run rsync anytime a file in
+.Em foo
+or
+.Em bar
+or any of it's subdirectories changes:
+.Bd -literal -offset indent
+zatch foo bar | while read _path; do rsync -az "$_path" example.com: ; done
+.Ed
+.Pp
+Show a macOS notification with the name of the subdirectory that contains
+changes, but filter out any component named
+.Em xar :
+.Bd -literal -offset indent
+zatch -s foo bar | fgrep --line-buffered -v '/xar/' | while read _path
+	do osascript -e "display notification \\"$_path\\""
+done
+.Ed
+.Pp
+Initially start Node.js, and restart whenever a file changes in the current
+working dir or any of it's subdirectories:
+.Bd -literal -offset indent
+zatch -p . | while read p; do pkill node; node server.js & done
+.Ed
 .Sh AUTHORS
 .An -nosplit
 .An Tim Kuijsten
