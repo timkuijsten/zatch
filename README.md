@@ -35,7 +35,7 @@ Initially start Node.js, and restart whenever a file changes in the current
 working dir or any of it's subdirectories:
 
 ```sh
-zatch -p . | while read p; do pkill node; node server.js & done
+node server.js & zatch . | while read -r p; do echo "$p" && kill $! ; node server.js & done
 ```
 
 
